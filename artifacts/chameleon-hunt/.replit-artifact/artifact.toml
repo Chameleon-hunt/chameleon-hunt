@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "CHAMELEON HUNT"
+version = "1.0.0"
+id = "artifacts/chameleon-hunt"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18254
+
+[services.development]
+run = "pnpm --filter @workspace/chameleon-hunt run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/chameleon-hunt", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/chameleon-hunt/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18254"
+BASE_PATH = "/"
