@@ -1,7 +1,11 @@
-import { createRoot } from 'react-dom/client';
+import { createRoot } from "react-dom/client";
+import App from "./App";
+import "./index.css";
 
-import App from './App';
+// פונקציה גלובלית שתטפל בהתחברות של גוגל מכל מקום באפליקציה
+(window as any).handleGoogleLogin = (response: any) => {
+  console.log("התחברת בהצלחה! הנה הטוקן מגוגל:", response.credential);
+  // כאן בהמשך נשלח את זה לשרת שלך ב-Render
+};
 
-import './index.css';
-
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById("root")!).render(<App />);
