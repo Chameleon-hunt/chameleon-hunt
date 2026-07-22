@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AnimatePresence, motion } from 'framer-motion';
+import { LanguageProvider } from './lib/i18n';
 import { Home } from './Home';
 import { Game } from './Game';
 
@@ -10,17 +11,9 @@ const queryClient = new QueryClient();
 
 export type Page = 'home' | 'map' | 'characters' | 'howtoplay';
 
-const slideVariants = {
-  enterFromRight: { x: '100%', opacity: 0 },
-  enterFromLeft:  { x: '-100%', opacity: 0 },
-  center:         { x: 0, opacity: 1 },
-  exitToLeft:     { x: '-100%', opacity: 0 },
-  exitToRight:    { x: '100%', opacity: 0 },
-};
-
 const pageOrder: Page[] = ['home', 'map', 'characters', 'howtoplay'];
 
-function App() {
+function AppInner() {
   const [page, setPage] = useState<Page>('home');
   const [direction, setDirection] = useState<1 | -1>(1);
 
@@ -42,7 +35,7 @@ function App() {
               variants={{
                 initial: (d: number) => ({ x: d > 0 ? '100%' : '-100%', opacity: 0 }),
                 animate: { x: 0, opacity: 1 },
-                exit:    (d: number) => ({ x: d > 0 ? '-18%' : '18%', opacity: 0 }),
+                exit:    (d: number) => ({ x: d > 0 ? '-15%' : '15%', opacity: 0, scale: 0.97 }),
               }}
               initial="initial"
               animate="animate"
@@ -59,6 +52,14 @@ function App() {
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
+  );
+}
+
+function App() {
+  return (
+    <LanguageProvider>
+      <AppInner />
+    </LanguageProvider>
   );
 }
 
