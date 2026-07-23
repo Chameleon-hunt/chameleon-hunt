@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Polyline, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -9,6 +9,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, RefreshCw, Check, Map, Users, HelpCircle, ArrowLeft, Target } from "lucide-react";
 import { LogoMark } from "./Home";
 import { useLang } from "./lib/i18n";
+import { useAuth } from "./lib/auth";
+import { UserMenu } from "./components/UserMenu";
 import type { Page } from "./App";
 
 import iconUrl from "leaflet/dist/images/marker-icon.png";
@@ -174,11 +176,27 @@ const INNER_TABS: Array<{ page: Page; icon: React.ReactNode; tKey: "map" | "char
 // ── Main Game component ───────────────────────────────────────────────────────
 export function Game({ activePage, onNavigate }: { activePage: Page; onNavigate: (page: Page) => void }) {
   const { t } = useLang();
+  const { profile, markFound: authMarkFound } = useAuth();
 
+  // Merge Firestore foundIds + localStorage on mount
   const [foundIds, setFoundIds] = useState<number[]>(() => {
-    try { return JSON.parse(localStorage.getItem("chameleon_hunt_found") ?? "[]"); }
-    catch { return []; }
+    const local: number[] = (() => {
+      try { return JSON.parse(localStorage.getItem("chameleon_hunt_found") ?? "[]"); }
+      catch { return []; }
+    })();
+    const remote = profile?.foundIds ?? [];
+    return [...new Set([...local, ...remote])];
   });
+
+  // Sync when profile loads (e.g. after initial auth)
+  useEffect(() => {
+    if (profile?.foundIds?.length) {
+      setFoundIds(prev => {
+        const merged = [...new Set([...prev, ...profile.foundIds])];
+        return merged;
+      });
+    }
+  }, [profile?.foundIds]);
 
   const [mapCenter, setMapCenter] = useState<[number, number] | undefined>(undefined);
   const [mapZoom, setMapZoom] = useState<number | undefined>(undefined);
@@ -215,11 +233,12 @@ export function Game({ activePage, onNavigate }: { activePage: Page; onNavigate:
     setCameraOpen(true);
   };
 
-  const handleFoundSuccess = (id: number) => {
+  const handleFoundSuccess = async (id: number) => {
     const next = [...new Set([...foundIds, id])];
     setFoundIds(next);
+    // Persist to localStorage + Firestore
     localStorage.setItem("chameleon_hunt_found", JSON.stringify(next));
-    // Close camera ONLY — do NOT close the sheet
+    await authMarkFound(id);
     setCameraOpen(false);
     closeSheet();
     setCelebrating(true);
@@ -276,7 +295,7 @@ export function Game({ activePage, onNavigate }: { activePage: Page; onNavigate:
         fontFamily: "'Outfit', sans-serif",
       }}
     >
-      {/* ── HERO HEADER (matches lobby style) ── */}
+      {/* ── HERO HEADER ── */}
       <div
         className="relative flex-shrink-0"
         style={{
@@ -284,7 +303,7 @@ export function Game({ activePage, onNavigate }: { activePage: Page; onNavigate:
           borderBottom: "1px solid rgba(255,107,0,0.18)",
         }}
       >
-        {/* Subtle colour blobs */}
+        {/* Colour blobs */}
         <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
           <div style={{ position: "absolute", top: -30, left: -40, width: 180, height: 160, background: "#FF2D55", borderRadius: "50%", filter: "blur(60px)", opacity: 0.07 }} />
           <div style={{ position: "absolute", top: -20, right: -30, width: 200, height: 140, background: "#0080FF", borderRadius: "50%", filter: "blur(60px)", opacity: 0.07 }} />
@@ -292,6 +311,7 @@ export function Game({ activePage, onNavigate }: { activePage: Page; onNavigate:
 
         {/* Nav row */}
         <nav className="relative z-10 flex items-center justify-between px-4 py-2.5">
+          {/* Left: back + logo */}
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => onNavigate("home")}
@@ -305,7 +325,7 @@ export function Game({ activePage, onNavigate }: { activePage: Page; onNavigate:
             </button>
           </div>
 
-          {/* Tab switcher */}
+          {/* Centre: tab switcher */}
           <div className="flex items-center gap-1">
             {INNER_TABS.map(({ page, icon, tKey }) => (
               <button
@@ -326,13 +346,16 @@ export function Game({ activePage, onNavigate }: { activePage: Page; onNavigate:
             ))}
           </div>
 
-          {/* Score badge */}
-          <div
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
-            style={{ background: "rgba(255,107,0,0.1)", border: "1px solid rgba(255,107,0,0.22)" }}
-          >
-            <Target className="w-4 h-4 text-orange-400" />
-            <span className="text-white font-bold text-sm">{foundIds.length}/{FIGURES.length}</span>
+          {/* Right: score + user menu */}
+          <div className="flex items-center gap-2">
+            <div
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl"
+              style={{ background: "rgba(255,107,0,0.1)", border: "1px solid rgba(255,107,0,0.22)" }}
+            >
+              <Target className="w-4 h-4 text-orange-400" />
+              <span className="text-white font-bold text-sm">{foundIds.length}/{FIGURES.length}</span>
+            </div>
+            <UserMenu />
           </div>
         </nav>
 
@@ -350,7 +373,6 @@ export function Game({ activePage, onNavigate }: { activePage: Page; onNavigate:
       <div className="flex-grow flex flex-col">
         {activePage === "map" && (
           <>
-            {/* Map (55vh on mobile, 60vh desktop) */}
             <div className="w-full flex-shrink-0" style={{ height: "clamp(280px, 55vh, 520px)" }}>
               <MapContainer center={[32.777, 34.992]} zoom={14} className="w-full h-full" zoomControl>
                 <TileLayer
@@ -443,7 +465,7 @@ export function Game({ activePage, onNavigate }: { activePage: Page; onNavigate:
         )}
       </div>
 
-      {/* ── BOTTOM SHEET — suppressClose when camera is open ── */}
+      {/* ── BOTTOM SHEET ── */}
       <FigureSheet
         figure={selectedFigure}
         isFound={selectedFigure ? foundIds.includes(selectedFigure.id) : false}

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Map, Trophy, HelpCircle, ShoppingBag, Users, ChevronDown, User, MapPin, X } from "lucide-react";
+import { Map, Trophy, HelpCircle, ShoppingBag, Users, ChevronDown, MapPin, X } from "lucide-react";
 import type { Page } from "./App";
 import { useLang, LANG_LABELS, type Lang } from "./lib/i18n";
+import { UserMenu } from "./components/UserMenu";
 
 // ── Big 3D character (matches reference image) ────────────────────────────────
 export function BigCharacter() {
@@ -35,55 +36,43 @@ export function BigCharacter() {
       </defs>
 
       {/* ── Left arm raised (above head level) ── */}
-      {/* Upper arm sausage */}
       <ellipse cx="36" cy="176" rx="22" ry="62" fill="url(#aG2)" transform="rotate(-52 36 176)" />
-      {/* Lower arm / wrist leading to hand */}
       <ellipse cx="16" cy="120" rx="18" ry="28" fill="url(#aG2)" transform="rotate(-35 16 120)" />
-      {/* Hand sphere */}
       <circle cx="8" cy="102" r="22" fill="url(#hG2)" />
-      {/* Thumb */}
       <ellipse cx="-4" cy="88" rx="9" ry="16" fill="url(#hG2)" transform="rotate(-30 -4 88)" />
-      {/* Hand highlight */}
       <ellipse cx="3" cy="97" rx="8" ry="6" fill="white" opacity="0.5" transform="rotate(-20 3 97)" />
 
-      {/* ── Head ── (dominant, large sphere) */}
+      {/* ── Head ── */}
       <circle cx="128" cy="110" r="98" fill="url(#hG2)" />
-      {/* Main highlight */}
       <ellipse cx="95" cy="74" rx="30" ry="19" fill="white" opacity="0.58" transform="rotate(-28 95 74)" />
-      {/* Secondary highlight */}
       <ellipse cx="162" cy="80" rx="12" ry="8" fill="white" opacity="0.28" />
 
-      {/* ── Eyes (rounded squares, wide) ── */}
+      {/* ── Eyes ── */}
       <rect x="89" y="90" width="26" height="30" rx="7" fill="#111" />
       <rect x="143" y="90" width="26" height="30" rx="7" fill="#111" />
-      {/* Eye glints */}
       <rect x="94" y="95" width="9" height="10" rx="3" fill="#444" />
       <rect x="148" y="95" width="9" height="10" rx="3" fill="#444" />
 
-      {/* ── Smile (smooth arc) ── */}
+      {/* ── Smile ── */}
       <path d="M 88 132 Q 128 168 168 132" stroke="#111" strokeWidth="7" fill="none" strokeLinecap="round" />
 
-      {/* ── Body (distinctly smaller than head) ── */}
+      {/* ── Body ── */}
       <ellipse cx="128" cy="305" rx="72" ry="90" fill="url(#bG2)" />
-      {/* Body highlight */}
       <ellipse cx="104" cy="262" rx="20" ry="32" fill="white" opacity="0.35" transform="rotate(-14 104 262)" />
 
-      {/* ── Right arm (going to the side, hand at end) ── */}
+      {/* ── Right arm ── */}
       <ellipse cx="208" cy="262" rx="22" ry="54" fill="url(#aG2)" transform="rotate(22 208 262)" />
-      {/* Right hand */}
       <circle cx="218" cy="312" r="20" fill="url(#sG2)" />
       <ellipse cx="212" cy="306" rx="8" ry="6" fill="white" opacity="0.42" />
 
       {/* ── Left leg ── */}
       <ellipse cx="102" cy="386" rx="30" ry="38" fill="url(#aG2)" />
       <ellipse cx="95" cy="380" rx="12" ry="8" fill="white" opacity="0.32" />
-      {/* Foot */}
       <ellipse cx="100" cy="416" rx="26" ry="16" fill="url(#aG2)" />
 
       {/* ── Right leg ── */}
       <ellipse cx="154" cy="386" rx="30" ry="38" fill="url(#aG2)" />
       <ellipse cx="147" cy="380" rx="12" ry="8" fill="white" opacity="0.32" />
-      {/* Foot */}
       <ellipse cx="152" cy="416" rx="26" ry="16" fill="url(#aG2)" />
     </svg>
   );
@@ -268,14 +257,10 @@ export function Home({ onNavigate }: { onNavigate: (page: Page) => void }) {
           ))}
         </div>
 
+        {/* Right: lang + user menu */}
         <div className="flex items-center gap-2.5">
           <LangPicker />
-          <button
-            className="w-9 h-9 rounded-full flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #7c3aed, #5b21b6)" }}
-          >
-            <User className="w-4 h-4 text-white" />
-          </button>
+          <UserMenu />
         </div>
       </nav>
 
