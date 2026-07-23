@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -9,6 +9,7 @@ import { Home } from './Home';
 import { Game } from './Game';
 import { AuthPage } from './components/AuthPage';
 import { UsernameModal } from './components/UsernameModal';
+import { LandingPage } from './components/LandingPage';
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,13 @@ function AppInner() {
   const { user, profile, loading, needsUsername } = useAuth();
   const [page, setPage] = useState<Page>('home');
   const [direction, setDirection] = useState<1 | -1>(1);
+  // showAuth: false = landing page, true = auth form
+  const [showAuth, setShowAuth] = useState(false);
+
+  // Reset to landing page whenever user logs out
+  useEffect(() => {
+    if (!user && !loading) setShowAuth(false);
+  }, [user, loading]);
 
   const navigate = (next: Page) => {
     const cur = pageOrder.indexOf(page);
@@ -66,8 +74,18 @@ function AppInner() {
   // 1. Auth resolving
   if (loading) return <LoadingScreen />;
 
-  // 2. Not logged in → show auth page
-  if (!user) return <AuthPage />;
+  // 2. Not logged in
+  if (!user) {
+    if (!showAuth) {
+      return (
+        <LandingPage
+          onGetStarted={() => setShowAuth(true)}
+          onSignIn={() => setShowAuth(true)}
+        />
+      );
+    }
+    return <AuthPage onBack={() => setShowAuth(false)} />;
+  }
 
   // 3. Logged in but no username yet → username picker
   if (needsUsername) return <UsernameModal />;

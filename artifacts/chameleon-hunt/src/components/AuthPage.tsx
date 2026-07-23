@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { GoogleButton } from './GoogleButton';
 import { LogoMark } from '../Home';
@@ -110,9 +110,9 @@ function ErrorBanner({ msg }: { msg: string }) {
   );
 }
 
-export function AuthPage() {
+export function AuthPage({ onBack, initialTab }: { onBack?: () => void; initialTab?: Tab }) {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
-  const [tab, setTab] = useState<Tab>('signin');
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);

@@ -128,19 +128,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const loginMethod: 'google' | 'email' =
           user.providerData[0]?.providerId === 'google.com' ? 'google' : 'email';
 
+        // Use new Date() inside the transaction — serverTimestamp() sentinels
+        // can cause issues with some Firestore SDK versions inside runTransaction.
+        const now = new Date();
+
         const profileData: Omit<UserProfile, 'createdAt'> & { createdAt: any } = {
           uid: user.uid,
           username: trimmed,
           email: user.email ?? '',
           photoURL: user.photoURL ?? null,
-          createdAt: serverTimestamp(),
+          createdAt: now,
           loginMethod,
           xp: localFound.length * 100,
           foundIds: localFound,
         };
 
         tx.set(doc(db, 'users', user.uid), profileData);
-        tx.set(unameRef, { uid: user.uid, createdAt: serverTimestamp() });
+        tx.set(unameRef, { uid: user.uid, createdAt: now });
       });
 
       await loadProfile(user.uid);
@@ -149,7 +153,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (err.message === 'USERNAME_TAKEN') {
         return { error: 'That username is already taken. Try another one.' };
       }
-      return { error: 'Something went wrong. Please try again.' };
+      // Surface the actual Firebase error code to help diagnose issues
+      const code = err?.code ?? '';
+      if (code === 'unavailable' || code.includes('offline')) {
+        return { error: 'Cannot reach the server. Check your connection and try again.' };
+      }
+      if (code === 'permission-denied') {
+        return { error: 'Permission denied. Firestore rules may need to be updated.' };
+      }
+      console.error('[createUsername] Firestore error:', err);
+      return { error: `Something went wrong (${code || err.message}). Please try again.` };
     }
   };
 
