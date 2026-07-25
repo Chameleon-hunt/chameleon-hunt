@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Figure, getFigureLocation } from "../lib/figures";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Navigation, Loader2, MapPin, ExternalLink, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { X, Navigation, Loader2, MapPin, ExternalLink, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
 import { useLang } from "../lib/i18n";
 
 export interface NavInfo {
@@ -17,16 +17,25 @@ interface FigureSheetProps {
   onClose: () => void;
   onFoundIt: (figure: Figure) => void;
   onNavigate: (figure: Figure) => Promise<NavInfo | null>;
+  onStopRoute: () => void;
   navInfo: NavInfo | null;
   suppressClose?: boolean;
 }
 
-export function FigureSheet({ figure, isFound, onClose, onFoundIt, onNavigate, navInfo, suppressClose }: FigureSheetProps) {
+export function FigureSheet({
+  figure,
+  isFound,
+  onClose,
+  onFoundIt,
+  onNavigate,
+  onStopRoute,
+  navInfo,
+  suppressClose,
+}: FigureSheetProps) {
   const { t } = useLang();
   const [navigating, setNavigating] = useState(false);
   const [navError, setNavError] = useState<string | null>(null);
 
-  // Report state
   const [reporting, setReporting] = useState(false);
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [reportStatus, setReportStatus] = useState<"idle" | "sent" | "error">("idle");
@@ -48,7 +57,10 @@ export function FigureSheet({ figure, isFound, onClose, onFoundIt, onNavigate, n
   const openGoogleMaps = () => {
     if (!figure) return;
     const [lat, lng] = getFigureLocation(figure);
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`, "_blank");
+    window.open(
+      `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`,
+      "_blank"
+    );
   };
 
   const submitReport = async () => {
@@ -74,7 +86,9 @@ export function FigureSheet({ figure, isFound, onClose, onFoundIt, onNavigate, n
     }
   };
 
-  const handleClose = () => {
+  // X button: if camera is open (suppressClose), do nothing — camera is on top.
+  // Otherwise close the sheet; if a route is active, the route stays on the map.
+  const handleXClose = () => {
     if (suppressClose) return;
     onClose();
   };
@@ -90,8 +104,8 @@ export function FigureSheet({ figure, isFound, onClose, onFoundIt, onNavigate, n
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[1000]"
-            style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)" }}
-            onClick={handleClose}
+            style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(3px)" }}
+            onClick={suppressClose ? undefined : onClose}
           />
 
           {/* Bottom Sheet */}
@@ -120,13 +134,20 @@ export function FigureSheet({ figure, isFound, onClose, onFoundIt, onNavigate, n
               className="flex items-center justify-between px-5 py-3"
               style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}
             >
-              <p className="text-sm font-bold tracking-widest" style={{ color: "rgba(255,107,0,0.9)", fontFamily: "'Righteous', sans-serif" }}>
+              <p
+                className="text-sm font-bold tracking-widest"
+                style={{ color: "rgba(255,107,0,0.9)", fontFamily: "'Righteous', sans-serif" }}
+              >
                 {isFound ? `✓ ${t.foundLabel}` : t.hiddenLabel}
               </p>
               <button
-                onClick={onClose}
+                onClick={handleXClose}
                 className="w-9 h-9 rounded-full flex items-center justify-center transition-colors active:scale-90"
-                style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.7)" }}
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  color: suppressClose ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.7)",
+                  cursor: suppressClose ? "not-allowed" : "pointer",
+                }}
               >
                 <X className="w-5 h-5" />
               </button>
@@ -139,7 +160,10 @@ export function FigureSheet({ figure, isFound, onClose, onFoundIt, onNavigate, n
                   <FigureSVG found={isFound} size={64} />
                 </div>
                 <div className="flex-grow">
-                  <h2 className="font-display text-2xl text-white tracking-wide leading-none mb-2" style={{ fontFamily: "'Righteous', sans-serif" }}>
+                  <h2
+                    className="font-display text-2xl text-white tracking-wide leading-none mb-2"
+                    style={{ fontFamily: "'Righteous', sans-serif" }}
+                  >
                     {figure.name}
                   </h2>
                   <span
@@ -166,36 +190,61 @@ export function FigureSheet({ figure, isFound, onClose, onFoundIt, onNavigate, n
                 <p className="text-white text-base font-medium leading-snug">{figure.hint}</p>
               </div>
 
-              {/* Navigation ETA */}
+              {/* Navigation ETA card */}
               {navInfo && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="rounded-2xl p-4 mb-4 flex items-center gap-3"
-                  style={{ background: "rgba(0,128,255,0.13)", border: "1px solid rgba(0,128,255,0.28)" }}
+                  className="rounded-2xl p-4 mb-4"
+                  style={{ background: "rgba(0,128,255,0.1)", border: "1px solid rgba(0,128,255,0.28)" }}
                 >
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(0,128,255,0.22)" }}>
-                    <Navigation className="w-5 h-5 text-blue-400" />
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ background: "rgba(0,128,255,0.2)" }}
+                      >
+                        <Navigation className="w-5 h-5 text-blue-400" />
+                      </div>
+                      <div>
+                        <p className="text-white font-bold text-lg leading-none">
+                          {navInfo.etaMinutes} {t.minWalk}
+                        </p>
+                        <p className="text-sm mt-0.5" style={{ color: "rgba(100,160,255,0.85)" }}>
+                          {navInfo.distanceMeters < 1000
+                            ? `${Math.round(navInfo.distanceMeters)} ${t.metersAway}`
+                            : `${(navInfo.distanceMeters / 1000).toFixed(1)} ${t.kmAway}`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={onStopRoute}
+                        className="flex items-center gap-1 text-xs font-bold px-2.5 py-1.5 rounded-xl"
+                        style={{ background: "rgba(255,45,85,0.15)", color: "#ff8099", border: "1px solid rgba(255,45,85,0.3)" }}
+                        title="Stop route"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        Stop
+                      </button>
+                      <button
+                        onClick={openGoogleMaps}
+                        className="flex items-center gap-1 text-xs text-blue-300 font-semibold px-2.5 py-1.5 rounded-xl"
+                        style={{ background: "rgba(0,128,255,0.12)", border: "1px solid rgba(0,128,255,0.25)" }}
+                      >
+                        {t.openMaps} <ExternalLink className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex-grow">
-                    <p className="text-white font-bold text-xl leading-none mb-0.5">
-                      {navInfo.etaMinutes} {t.minWalk}
-                    </p>
-                    <p className="text-sm" style={{ color: "rgba(100,160,255,0.9)" }}>
-                      {navInfo.distanceMeters < 1000
-                        ? `${Math.round(navInfo.distanceMeters)} ${t.metersAway}`
-                        : `${(navInfo.distanceMeters / 1000).toFixed(1)} ${t.kmAway}`}
-                    </p>
-                  </div>
-                  <button onClick={openGoogleMaps} className="flex items-center gap-1 text-xs text-blue-300 font-semibold">
-                    {t.openMaps} <ExternalLink className="w-3 h-3" />
-                  </button>
                 </motion.div>
               )}
 
               {/* Nav error */}
               {navError && (
-                <div className="rounded-2xl p-3 mb-4 text-sm" style={{ background: "rgba(255,45,85,0.12)", border: "1px solid rgba(255,45,85,0.28)", color: "#ff8099" }}>
+                <div
+                  className="rounded-2xl p-3 mb-4 text-sm"
+                  style={{ background: "rgba(255,45,85,0.12)", border: "1px solid rgba(255,45,85,0.28)", color: "#ff8099" }}
+                >
                   <div className="flex items-start gap-2">
                     <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
                     <span>{navError}</span>
@@ -270,7 +319,7 @@ export function FigureSheet({ figure, isFound, onClose, onFoundIt, onNavigate, n
                 </div>
               )}
 
-              {/* ── Report section ── */}
+              {/* Report section */}
               <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                 {!reporting ? (
                   <button
@@ -333,7 +382,7 @@ export function FigureSheet({ figure, isFound, onClose, onFoundIt, onNavigate, n
   );
 }
 
-// ── Improved character SVG (matches 3D blob style) ────────────────────────────
+// ── Improved character SVG ────────────────────────────────────────────────────
 export function FigureSVG({ found, size = 56 }: { found: boolean; size?: number }) {
   const fill = found ? "#ccffcc" : "#ffffff";
   const stroke = found ? "#00cc00" : "#d4d4d4";
@@ -347,18 +396,12 @@ export function FigureSVG({ found, size = 56 }: { found: boolean; size?: number 
           <stop offset="100%" stopColor={stroke} />
         </radialGradient>
       </defs>
-      {/* Head */}
       <circle cx="22" cy="16" r="14" fill={`url(#fg-${found ? 'f' : 'h'})`} />
-      {/* Eyes */}
       <rect x="13" y="11" width="6" height="8" rx="2" fill={eye} />
       <rect x="25" y="11" width="6" height="8" rx="2" fill={eye} />
-      {/* Smile */}
       <path d="M 14 23 Q 22 30 30 23" stroke={eye} strokeWidth="2" fill="none" strokeLinecap="round" />
-      {/* Body */}
       <ellipse cx="22" cy="48" rx="14" ry="16" fill={`url(#fg-${found ? 'f' : 'h'})`} />
-      {/* Left arm raised */}
       <ellipse cx="7" cy="36" rx="5" ry="11" fill={`url(#fg-${found ? 'f' : 'h'})`} transform="rotate(-45 7 36)" />
-      {/* Right arm */}
       <ellipse cx="37" cy="42" rx="5" ry="10" fill={`url(#fg-${found ? 'f' : 'h'})`} transform="rotate(20 37 42)" />
     </svg>
   );

@@ -6,7 +6,7 @@ import { FIGURES, Figure, getFigureLocation } from "./lib/figures";
 import { CameraModal } from "./components/CameraModal";
 import { FigureSheet, NavInfo, FigureSVG } from "./components/FigureSheet";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, RefreshCw, Check, Map, Users, HelpCircle, ArrowLeft, Target } from "lucide-react";
+import { MapPin, RefreshCw, Check, Map, Users, HelpCircle, ArrowLeft, Target, Navigation, XCircle } from "lucide-react";
 import { LogoMark } from "./Home";
 import { useLang } from "./lib/i18n";
 import { useAuth } from "./lib/auth";
@@ -211,17 +211,27 @@ export function Game({ activePage, onNavigate }: { activePage: Page; onNavigate:
 
   const openFigure = (fig: Figure) => {
     setSelectedFigure(fig);
-    setNavInfo(null);
-    setRouteCoords([]);
-    setUserLocation(null);
-    setMapBounds(null);
+    // Only clear route when switching to a different figure
+    if (selectedFigure?.id !== fig.id) {
+      setNavInfo(null);
+      setRouteCoords([]);
+      setUserLocation(null);
+      setMapBounds(null);
+    }
     setMapCenter(getFigureLocation(fig));
     setMapZoom(17);
     if (activePage !== "map") onNavigate("map");
   };
 
+  // Close the sheet but KEEP the route visible on the map
   const closeSheet = () => {
     setSelectedFigure(null);
+    setMapBounds(null);
+    // routeCoords / navInfo / userLocation are intentionally preserved
+  };
+
+  // Fully clear route — called by "Stop Route" button
+  const stopRoute = () => {
     setNavInfo(null);
     setRouteCoords([]);
     setUserLocation(null);
